@@ -1,0 +1,22 @@
+{
+  "name": "reporting",
+  "version": "1.0.0",
+  "description": "cli for lpm devops reporting",
+  "main": "bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daniel Denney",
+  "license": "ISC",
+  "bin": {
+    "reporting": "./bin/index.js"
+  },
+  "dependencies": {
+    "axios": "^0.24.0",
+    "exceljs": "^4.3.0",
+    "yargs": "^17.3.0"
+  },
+  "devDependencies": {
+    "dotenv": "^10.0.0"
+  }
+}
