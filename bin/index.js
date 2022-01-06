@@ -144,15 +144,25 @@ function checkAge(issue) {
     return age;
 }
 
-function categorizeAge(age, i = 90) {
-    // initialize total days to iterate, default value of 90
-    // initialize an array called ages
-        // push "{age} Day Symmary" as element to ages array, recur until i = 0
-    // return ages array
+function categorizeAge(age) {
     const ages = [];
-    if (age <= i && i > 0) {
-        ages.push(`${i} Day Summary`)
-        categorizeAge(age, i - 1)
+    if (age < 90) {
+        ages.push(`90 Day Summary`)
+    }
+    if (age < 30) {
+        ages.push(`30 Day Summary`)
+    }
+    if (age < 15) {
+        ages.push(`15 Day Summary`)
+    }
+    if (age < 7) {
+        ages.push(`7 Day Summary`)
+    }
+    if (age < 2) {
+        ages.push(`2 Day Summary`)
+    }
+    if (age < 1) {
+        ages.push(`1 Day Summary`)
     }
     return ages;
 }
