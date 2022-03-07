@@ -5,6 +5,8 @@ const { bopisProcessingTime } = require("./queryFunctions/bopisProcessingTime");
 const { cancellations, storeVendorDCCancel } = require("./queryFunctions/cancellations");
 const { currentOpenCriticalTickets, criticalTicketsCreated } = require("./requestFunctions/criticalTickets")
 const { backorderedSuccessful, stuckInAllocated, timeToRelease } = require("./queryFunctions/allocatedReleased")
+const { failRate } = require("./queryFunctions/payment");
+const { fillRate, storeFirstFillRates } = require("./queryFunctions/fulfillment");
 
 async function buildReport() {
     try {
@@ -36,7 +38,18 @@ async function buildReport() {
         console.log(`Average N97 Time to Release for MP: ${ttr.MP} minutes`)
         console.log(`Average N97 Time to Release for PRO: ${ttr.PRO} minutes`)
         console.log(`Average N97 Time to Release for PSW: ${ttr.PSW} minutes`)
-
+        const odfill = await fillRate(1)
+        odfill.forEach((line) => console.log(`1 Day Fill Rate for ${line.FULFILLMENT_TYPE}: ${line.FILL_RATE}%`))
+        const owfill = await fillRate(7)
+        owfill.forEach((line) => console.log(`7 Day Fill Rate for ${line.FULFILLMENT_TYPE}: ${line.FILL_RATE}%`))
+        const sfod = await storeFirstFillRates(1)
+        //add more fulfillment functions
+        const odfr = await failRate(1)
+        console.log(`1 Day Max Payment Failure Rate: ${odfr.CARD_TYPE}, ${odfr.FAILURE_RATE}%`)
+        const owfr = await failRate(7)
+        console.log(`7 Day Max Payment Failure Rate: ${owfr.CARD_TYPE}, ${owfr.FAILURE_RATE}%`)
+        const tdfr = await failRate(30)
+        console.log(`30 Day Max Payment Failure Rate: ${tdfr.CARD_TYPE}, ${tdfr.FAILURE_RATE}%`)
         console.log("-----")
     } catch (e) {
         console.error(e)

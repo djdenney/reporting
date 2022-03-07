@@ -111,7 +111,7 @@ async function stuckInAllocated() {
                 )
             )`
     )
-    const filtered = response[0].filter((line) => !line.ORDER_ID.startsWith("CIT") || line.AGING_TIME.slice(0, 2) > 0)
+    const filtered = response[0].filter((line) => !line.ORDER_ID.startsWith("CIT") && line.AGING_TIME.slice(0, 2) > 0)
     return filtered.length
 }
 
@@ -193,5 +193,5 @@ async function timeToRelease(ITS = [], LEA = [], LPS = [], MP = [], PRO = [], PS
 
     return result
 }
-
+stuckInAllocated()
 module.exports = {backorderedSuccessful, stuckInAllocated, timeToRelease}
