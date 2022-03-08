@@ -284,6 +284,53 @@ async function storeFirstFillRates(days) {
 }
 
 async function uniqueStoreFillRate(days) {
-    
+    const response = await knex.raw(
+        `SELECT
+            LOCATION_SUB_TYPE_ID,
+            AVG(SFR)
+        FROM
+            (
+                SELECT
+                    SUM(T1.FULFILLED_QUANTITY) /(
+                        SUM(T1.FULFILLED_QUANTITY) + SUM(T1.CANCELLED_QUANTITY)
+                    ) AS SFR,
+                    LOCATION_SUB_TYPE_ID
+                FROM
+                    (
+                        SELECT
+                            ORDER_ID,
+                            ORDER_LINE_ID,
+                            ITEM_ID,
+                            FULFILLED_QUANTITY,
+                            CANCELLED_QUANTITY,
+                            SHIP_FROM_LOCATION_ID AS SFLI,
+                            IL.LOCATION_SUB_TYPE_ID
+                        FROM
+                            default_order.ORD_RELEASE_LINE RL
+                            INNER JOIN default_order.ORD_RELEASE R ON RL.RELEASE_PK = R.PK
+                            INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = R.SHIP_FROM_LOCATION_ID
+                        WHERE
+                            RL.CREATED_TIMESTAMP > NOW() - INTERVAL ${days} DAY
+                        GROUP BY
+                            ORDER_ID,
+                            ORDER_LINE_ID,
+                            ITEM_ID,
+                            FULFILLED_QUANTITY,
+                            CANCELLED_QUANTITY,
+                            SHIP_FROM_LOCATION_ID,
+                            IL.LOCATION_SUB_TYPE_ID
+                    ) T1
+                GROUP BY
+                    T1.LOCATION_SUB_TYPE_ID
+                HAVING
+                    SUM(T1.FULFILLED_QUANTITY) /(
+                        SUM(T1.FULFILLED_QUANTITY) + SUM(T1.CANCELLED_QUANTITY)
+                    ) IS NOT NULL
+            ) AS T2
+        GROUP BY
+            LOCATION_SUB_TYPE_ID`
+    )
+    const usfr = Object.values(response[0].find((line) => line.LOCATION_SUB_TYPE_ID === "StoreRegular")).find((value) => typeof value === 'number')
+    return Math.floor(usfr * 10000) / 100
 }
-module.exports = { fillRate, storeFirstFillRates }
+module.exports = { fillRate, storeFirstFillRates, uniqueStoreFillRate }

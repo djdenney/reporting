@@ -2,11 +2,12 @@ const knex = require("./connection");
 const ExcelJS = require("exceljs");
 const workbook = new ExcelJS.Workbook();
 const { bopisProcessingTime } = require("./queryFunctions/bopisProcessingTime");
-const { cancellations, storeVendorDCCancel } = require("./queryFunctions/cancellations");
+const { cancellations, storeVendorDCCancel, allCancelRates, cancelToStoreOrVendor } = require("./queryFunctions/cancellations");
 const { currentOpenCriticalTickets, criticalTicketsCreated } = require("./requestFunctions/criticalTickets")
 const { backorderedSuccessful, stuckInAllocated, timeToRelease } = require("./queryFunctions/allocatedReleased")
 const { failRate } = require("./queryFunctions/payment");
-const { fillRate, storeFirstFillRates } = require("./queryFunctions/fulfillment");
+const { fillRate, storeFirstFillRates, uniqueStoreFillRate } = require("./queryFunctions/fulfillment");
+const { returnRate, blindReturns } = require("./queryFunctions/returns")
 
 async function buildReport() {
     try {
@@ -42,14 +43,34 @@ async function buildReport() {
         odfill.forEach((line) => console.log(`1 Day Fill Rate for ${line.FULFILLMENT_TYPE}: ${line.FILL_RATE}%`))
         const owfill = await fillRate(7)
         owfill.forEach((line) => console.log(`7 Day Fill Rate for ${line.FULFILLMENT_TYPE}: ${line.FILL_RATE}%`))
+        const sufrod = await uniqueStoreFillRate(1)
+        console.log(`1 Day Store Unique Fill Rate: ${sufrod}%`)
+        const sufrow = await uniqueStoreFillRate(7)
+        console.log(`7 Day Store Unique Fill Rate: ${sufrow}%`)
         const sfod = await storeFirstFillRates(1)
-        //add more fulfillment functions
+        console.log(`1 Day Store First Fill Rate: ${sfod}%`)
+        const sfow = await storeFirstFillRates(7)
+        console.log(`7 Day Store First Fill Rate: ${sfow}%`)
         const odfr = await failRate(1)
         console.log(`1 Day Max Payment Failure Rate: ${odfr.CARD_TYPE}, ${odfr.FAILURE_RATE}%`)
         const owfr = await failRate(7)
         console.log(`7 Day Max Payment Failure Rate: ${owfr.CARD_TYPE}, ${owfr.FAILURE_RATE}%`)
         const tdfr = await failRate(30)
         console.log(`30 Day Max Payment Failure Rate: ${tdfr.CARD_TYPE}, ${tdfr.FAILURE_RATE}%`)
+        const rrsixty = await returnRate(60)
+        console.log(`60 Day Return Rate: ${rrsixty}`)
+        const rryear = await returnRate(365)
+        console.log(`365 Day Return Rate: ${rryear}`)
+        const odbxmp = await blindReturns(1, false)
+        console.log(`1 Day Blind Return Rate (Excluding Marketplace): ${odbxmp}%`)
+        const owbxmp = await blindReturns(7, false)
+        console.log(`1 Day Blind Return Rate (Excluding Marketplace): ${owbxmp}%`)
+        const odbmp = await blindReturns(1, true)
+        console.log(`1 Day Blind Return Rate for Marketplace: ${odbmp}`)
+        const acr = await allCancelRates(1)
+        console.log(`Highest Cancel Rate of 1, 7, 30, 90, 365 Day Intervals: ${acr}%`)
+        const ctsov = await cancelToStoreOrVendor()
+        console.log(`Cancels to Store or Vendor: ${ctsov}%`)
         console.log("-----")
     } catch (e) {
         console.error(e)
