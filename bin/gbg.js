@@ -8,8 +8,11 @@ const { backorderedSuccessful, stuckInAllocated, timeToRelease } = require("./qu
 const { failRate } = require("./queryFunctions/payment");
 const { fillRate, storeFirstFillRates, uniqueStoreFillRate } = require("./queryFunctions/fulfillment");
 const { returnRate, blindReturns } = require("./queryFunctions/returns")
+const { openRates, backorderRates } = require("./queryFunctions/orderAging")
 
 async function buildReport() {
+    let oneDayTotal = 0
+    let twoDayTotal = 0
     try {
         console.log("-----")
         const bpt1 = await bopisProcessingTime(1)
@@ -70,7 +73,47 @@ async function buildReport() {
         const acr = await allCancelRates(1)
         console.log(`Highest Cancel Rate of 1, 7, 30, 90, 365 Day Intervals: ${acr}%`)
         const ctsov = await cancelToStoreOrVendor()
-        console.log(`Cancels to Store or Vendor: ${ctsov}%`)
+        console.log(`Cancel Rate to Store or Vendor: ${ctsov}%`)
+        const oprat = await openRates()
+        oprat.forEach((line, i) => {
+            switch(Object.keys(line)[0]) {
+                case "3PL":
+                    console.log(`Orders Open 2-3 Days Rate for 3PL: ${Object.values(line)[0]}%`);
+                    break;
+                case "DropShipVendor":
+                    console.log(`Orders Open 2-3 Days Rate for Vendor: ${Object.values(line)[0]}%`);
+                    break;
+                case "OwnedWM":
+                    console.log(`Orders Open 2-3 Days Rate for DC: ${Object.values(line)[0]}%`);
+                    break;
+                case "StoreRegular":
+                    console.log(`Orders Open 2-3 Days Rate for Stores: ${Object.values(line)[0]}%`);
+                    break;
+                case "SevenDayOpen":
+                    console.log(`Orders Open 7 Days Rate: ${Object.values(line)[0]}%`);
+                    break;
+                case "ThirtyDatOpenDC3PLStore":
+                    console.log(`Orders Open 30 Days Rate for DC, 3PL, and Store: ${Object.values(line)[0]}%`);
+                    break;
+                case "OpenThirtyDays":
+                    console.log(`Orders Open 30 Days: ${Object.values(line)[0]}`);
+                    break;
+                case "VendorThirtyDayRate":
+                    console.log(`Orders Open 30 Days Rate for Vendor: ${Object.values(line)[0]}%`);
+                    break;
+                case "VendorSevenDayRate":
+                    console.log(`Orders Open 7 Days Rate for Vendor: ${Object.values(line)[0]}%`);
+                    break;
+                case "OneDayTotal":
+                    oneDayTotal = Object.values(line)[0]
+                    break;
+                case "TwoDayTotal":
+                    twoDayTotal = Object.values(line)[0]
+                    break;
+            }
+        })
+        const borat = await backorderRates(oneDayTotal, twoDayTotal)
+        console.log()
         console.log("-----")
     } catch (e) {
         console.error(e)
