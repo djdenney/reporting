@@ -163,4 +163,87 @@ async function cancelToStoreOrVendor() {
     return Object.values(response[0][0])[0]
 }
 
-module.exports = {cancellations, storeVendorDCCancel, allCancelRates, cancelToStoreOrVendor};
+async function bopisLineShorts() {
+    const response = await knex.raw(
+        `select
+        BOPIS_SHORTS.REASON as SHORT_REASON,
+        BOPIS_SHORTS.TOTAL_PRICE as ITEM_PRICE_OF_CANCELLED_QUANTITY,
+        BOPIS_SHORTS.FULFILLMENT_LINE_TOTAL as FULFILLMENT_LINE_TOTAL,
+        round(
+            (
+                BOPIS_SHORTS.FULFILLMENT_LINE_TOTAL / BOPIS_TOTAL.TOTAL_LINE
+            ) * 100,
+            2
+        ) as PERCENT_OF_TOTAL
+    from
+        (
+            select
+                ffls.SHORT_REASON_ID as REASON,
+                SUM(
+                    ROUND((ffl.ITEM_UNIT_PRICE * ffl.CANCELLED_QTY), 2)
+                ) as TOTAL_PRICE,
+                count(ffl.PK) as FULFILLMENT_LINE_TOTAL
+            from
+                default_fulfillment.FUL_FULFILLMENT_LINE_SHORTS ffls
+                inner join default_fulfillment.FUL_FULFILLMENT_LINE ffl on ffl.PK = ffls.FULFILLMENT_LINE_PK
+                inner join default_fulfillment.FUL_FULFILLMENT ff on ff.PK = ffl.FULFILLMENT_PK
+                inner join default_organization.ORG_LOCATION ol on ol.LOCATION_ID = ff.SHIP_FROM_LOCATION_ID
+            where
+                1 = 1
+                and ffls.UPDATED_TIMESTAMP > now() - INTERVAL 7 DAY
+                and ff.ORDER_TYPE_ID != 'Marketplace'
+                and ffl.FULFILLMENT_LINE_STATUS_ID = '9000.000'
+                and ff.DELIVERY_METHOD_ID = 'PickUpAtStore'
+                and ol.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+                and ff.CANCEL_REASON_ID is null
+            GROUP BY
+                ffls.SHORT_REASON_ID
+        ) as BOPIS_SHORTS,
+        (
+            select
+                -- SUM(ROUND((ffl.ITEM_UNIT_PRICE * ffl.ORDERED_QTY),2)) as PRICE, 
+                count(ffl.PK) as TOTAL_LINE
+            from
+                default_fulfillment.FUL_FULFILLMENT_LINE ffl
+                inner join default_fulfillment.FUL_FULFILLMENT ff on ff.PK = ffl.FULFILLMENT_PK
+                inner join default_organization.ORG_LOCATION ol on ol.LOCATION_ID = ff.SHIP_FROM_LOCATION_ID
+            where
+                1 = 1
+                and ffl.CREATED_TIMESTAMP > now() - INTERVAL 7 DAY
+                and ff.ORDER_TYPE_ID != 'Marketplace'
+                and ff.DELIVERY_METHOD_ID = 'PickUpAtStore'
+                and ol.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+        ) as BOPIS_TOTAL`
+    )
+    const totalLines = response[0].reduce((a, b) => a + b.FULFILLMENT_LINE_TOTAL, 0)
+    return totalLines
+}
+
+async function bopisLineCancels() {
+    const response = await knex.raw(
+        `select
+            SUM(ROUND((ffl.ITEM_UNIT_PRICE * ffl.ORDERED_QTY), 2)) as TOTAL_PRICE,
+            count(ffl.PK) as TOTAL_LINE
+        from
+            default_fulfillment.FUL_FULFILLMENT_LINE ffl
+            inner join default_fulfillment.FUL_FULFILLMENT ff on ff.PK = ffl.FULFILLMENT_PK
+            inner join default_organization.ORG_LOCATION ol on ol.LOCATION_ID = ff.SHIP_FROM_LOCATION_ID
+        where
+            1 = 1
+            and ffl.CREATED_TIMESTAMP > now() - INTERVAL 7 DAY
+            and ff.ORDER_TYPE_ID != 'Marketplace'
+            and ff.DELIVERY_METHOD_ID = 'PickUpAtStore'
+            and ol.LOCATION_SUB_TYPE_ID = 'StoreRegular'`
+    )
+    return response[0][0].TOTAL_LINE
+}
+bopisLineCancels()
+
+module.exports = {
+    cancellations, 
+    storeVendorDCCancel, 
+    allCancelRates, 
+    cancelToStoreOrVendor,
+    bopisLineShorts,
+    bopisLineCancels,
+};

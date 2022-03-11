@@ -133,19 +133,22 @@ async function openRates() {
     let vendorSevenDayRateResult = {}
     vendorSevenDayRateResult["VendorSevenDayRate"] = vendorSevenDayRate
     resultArray.push(vendorSevenDayRateResult)
-    const oneDayTotal = response[0].reduce((a, b) => a + b[1], 0)
+    const oneDayTotal = response[0].reduce((a, b) => a + Object.values(b)[1], 0)
     let oneDayTotalResult = {}
     oneDayTotalResult["OneDayTotal"] = oneDayTotal
     resultArray.push(oneDayTotalResult)
-    const twoDayTotal = response[0].reduce((a, b) => a + b[1] + b[2], 0)
+    const twoDayTotal = response[0].reduce((a, b) => a + Object.values(b)[1] + Object.values(b)[2], 0)
     let twoDayTotalResult = {}
     twoDayTotalResult["TwoDayTotal"] = twoDayTotal
     resultArray.push(twoDayTotalResult)
-    const 
+    const totalOrders = response[0].reduce((a, b) => a + Object.values(b).reduce((c, d) => isNaN(d) ? c : c + d, 0), 0)
+    let totalOrdersResult = {}
+    totalOrdersResult["TotalOrders"] = totalOrders
+    resultArray.push(totalOrdersResult)
     return resultArray
 }
 
-async function backorderRates(oneDayTotal, twoDayTotal) {
+async function backorderRates(oneDayTotal, twoDayTotal, totalOrders) {
     const response = await knex.raw(
         `SELECT
             subtable.DESCRIPTION AS "Order Status",
@@ -235,17 +238,141 @@ async function backorderRates(oneDayTotal, twoDayTotal) {
     const resultArray = []
     const backorderOneDay = Math.floor(response[0].reduce((a, b) => Object.values(b).includes("Back Ordered") ? a + Object.values(b)[1] : a, 0) / oneDayTotal * 10000) / 100
     let backorderOneDayResult = {}
-    backorderOneDayResult["backorderOneDay"] = backorderOneDay
+    backorderOneDayResult["BackorderOneDay"] = backorderOneDay
     resultArray.push(backorderOneDayResult)
-    const backorderThirtyDay = Math.floor(response[0].reduct((a, b) => Object.values(b).includes("Back Ordered") ? a + Object.values(b)[8] : a, 0) / oneDayTotal * 10000) / 100
+    const backorderThirtyDay = Math.floor(response[0].reduce((a, b) => Object.values(b).includes("Back Ordered") ? a + Object.values(b)[8] : a, 0) / oneDayTotal * 10000) / 100
     let backorderThirtyDayResult = {}
-    backorderThirtyDayResult["backorderThirtyDay"] = backorderThirtyDay
+    backorderThirtyDayResult["BackorderThirtyDay"] = backorderThirtyDay
     resultArray.push(backorderThirtyDayResult)
     const allocatedTwoDay = Math.floor(response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b)[1] + Object.values(b)[2] : a, 0) / twoDayTotal * 10000) / 100
     let allocatedTwoDayResult = {}
     allocatedTwoDayResult["AllocatedTwoDay"] = allocatedTwoDay
     resultArray.push(allocatedTwoDayResult)
+    const allocatedThirtyDayRate = Math.floor(response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b).reduce((c, d) => isNaN(d) ? c : c + d, 0) : a, 0) / totalOrders * 10000) / 100
+    let allocatedThirtyDayRateResult = {}
+    allocatedThirtyDayRateResult["AllocatedThirtyDayRate"] = allocatedThirtyDayRate
+    resultArray.push(allocatedThirtyDayRateResult)
+    const allocatedThirtyDayTotal = response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b)[8] : a, 0)
+    let allocatedThirtyDayTotalResult = {}
+    allocatedThirtyDayTotalResult["AllocatedThirtyDayTotal"] = allocatedThirtyDayTotal
+    resultArray.push(allocatedThirtyDayRateResult)
+    const allocatedTenDayTotal = response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b)[7] : a, 0)
+    let allocatedTenDayTotalResult = {}
+    allocatedTenDayTotalResult["AllocatedTenDayTotal"] = allocatedTenDayTotal
+    resultArray.push(allocatedTenDayTotal)
+    return resultArray
 }   
+
+async function returnToShelf() {
+    const response = await knex.raw(
+        `SELECT
+            FF.SHIP_TO_LOCATION_ID,
+            date_format(FF.CREATED_TIMESTAMP, '%Y-%m-%d') AS 'CREATED_TIMESTAMP',
+            FFL.ORDER_ID,
+            FF.FULFILLMENT_ID,
+            FF.CUSTOMER_FIRST_NAME,
+            FF.CUSTOMER_LAST_NAME,
+            date_format(FF.PICKUP_EXPIRY_DATE, '%Y-%m-%d') AS 'PICKUP_EXPIRTY_DATE',
+            FFL.ITEM_ID,
+            FFL.ORDERED_QTY,
+            FFL.ITEM_UNIT_PRICE,
+            -- FFL.FULFILLMENT_LINE_STATUS_ID,
+            SD.DESCRIPTION,
+            TIMESTAMPDIFF(DAY, MIN(FF.CREATED_TIMESTAMP), CURDATE()) AS 'AGE_IN_DAYS'
+        FROM
+            default_fulfillment.FUL_FULFILLMENT FF
+            INNER JOIN default_fulfillment.FUL_FULFILLMENT_LINE FFL ON FFL.FULFILLMENT_PK = FF.PK
+            INNER JOIN default_fulfillment.FW_STATUS_DEFINITION SD ON (
+                SD.STATUS = FFL.FULFILLMENT_LINE_STATUS_ID
+                AND SD.PROFILE_ID = 'LPS'
+            )
+        WHERE
+            FF.PICKUP_EXPIRY_DATE <= NOW() - INTERVAL 3 DAY
+            AND FFL.FULFILLMENT_LINE_STATUS_ID = '3000.000'
+        GROUP BY
+            FF.SHIP_TO_LOCATION_ID,
+            FF.CREATED_TIMESTAMP,
+            FFL.ORDER_ID,
+            FF.FULFILLMENT_ID,
+            FF.CUSTOMER_FIRST_NAME,
+            FF.CUSTOMER_LAST_NAME,
+            FF.PICKUP_EXPIRY_DATE,
+            FFL.ITEM_ID,
+            FFL.ORDERED_QTY,
+            FFL.ITEM_UNIT_PRICE,
+            SD.DESCRIPTION,
+            FF.CREATED_TIMESTAMP
+        ORDER BY
+            'AGE_IN_DAYS' DESC`
+    )
+    return response[0].length
+}
+
+async function stalePickStatus() {
+    const response = await knex.raw(
+        `select
+            oo.ORDER_ID,
+            oor.RELEASE_ID,
+            ool.ITEM_ID,
+            -- IL.LOCATION_SUB_TYPE_ID,
+            oor.SHIP_FROM_LOCATION_ID,
+            oor.DELIVERY_METHOD_ID,
+            date_format(oo.CREATED_TIMESTAMP, '%Y-%m-%d') as 'CREATED_TIMESTAMP',
+            -- ool.MIN_FULFILLMENT_STATUS_ID,
+            SD.DESCRIPTION,
+            CASE
+                WHEN (
+                    oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 1 DAY
+                ) THEN 'Open 0-1 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 1 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 2 DAY
+                ) THEN 'Open 1-2 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 2 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 3 DAY
+                ) THEN 'Open 2-3 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 3 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 5 DAY
+                ) THEN 'Open 3-5 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 5 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 7 DAY
+                ) THEN 'Open 5-7 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 7 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 10 DAY
+                ) THEN 'Open 7-10 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP < current_timestamp() - INTERVAL 10 DAY
+                    AND oo.CREATED_TIMESTAMP > current_timestamp() - INTERVAL 30 DAY
+                ) THEN 'Open 10-30 day'
+                WHEN (
+                    oo.CREATED_TIMESTAMP <= current_timestamp() - INTERVAL 30 DAY
+                ) THEN 'Open 30+ day'
+            END AS AGE
+        from
+            default_order.ORD_ORDER oo
+            inner join default_order.ORD_ORDER_LINE ool on ool.ORDER_PK = oo.PK
+            inner join default_order.ORD_RELEASE oor on oor.ORDER_PK = oo.PK
+            inner join default_order.ORD_RELEASE_LINE orl on orl.ORDER_LINE_ID = ool.ORDER_LINE_ID
+            and orl.RELEASE_PK = oor.PK
+            INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = oor.SHIP_FROM_LOCATION_ID
+            INNER JOIN default_order.FW_STATUS_DEFINITION SD on (
+                SD.STATUS = ool.MIN_FULFILLMENT_STATUS_ID
+                and SD.PROFILE_ID = oo.ORG_ID
+            )
+        where
+            1 = 1
+            and ool.DELIVERY_METHOD_ID = 'ShipToAddress'
+            and IL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+            and ool.MIN_FULFILLMENT_STATUS_ID = '3600'
+            and (orl.FULFILLED_QUANTITY + orl.CANCELLED_QUANTITY) < orl.QUANTITY`
+    )
+    return response[0].length
+}
+
+stalePickStatus()
     
-backorderRates()
-module.exports = { openRates, backorderRates }
+module.exports = { openRates, backorderRates, returnToShelf, stalePickStatus }
