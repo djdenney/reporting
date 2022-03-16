@@ -26,96 +26,86 @@ async function storeBounceRate() {
                     R.ORDER_ID
             ) SB`
     )
-    return Object.values(response[0][0])[0]
+    return Math.floor(Object.values(response[0][0])[0] * 100) / 100
 }
 
 async function tenBounce() {
     const response = await knex.raw(
         `SELECT
-            COUNT(DISTINCT(OO10.OID))
+            OO.ORDER_ID AS OID,
+            OOL.ORDER_LINE_ID,
+            OOL.ITEM_ID,
+            OOL.IS_ON_HOLD,
+            OOL.MAX_FULFILLMENT_STATUS_ID,
+            OOL.MIN_FULFILLMENT_STATUS_ID,
+            OO.CREATED_TIMESTAMP
         FROM
-            (
-                SELECT
-                    OO.ORDER_ID AS OID,
-                    OOL.ORDER_LINE_ID,
-                    OOL.ITEM_ID,
-                    OOL.IS_ON_HOLD,
-                    OOL.MAX_FULFILLMENT_STATUS_ID,
-                    OOL.MIN_FULFILLMENT_STATUS_ID,
-                    OO.CREATED_TIMESTAMP
-                FROM
-                    default_order.ORD_ORDER OO
-                    INNER JOIN default_order.ORD_RELEASE RL ON OO.ORDER_ID = RL.ORDER_ID
-                    INNER JOIN default_order.ORD_ORDER_LINE OOL ON OOL.ORDER_PK = OO.PK
-                    INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = RL.SHIP_FROM_LOCATION_ID
-                    INNER JOIN default_order.ORD_RELEASE_LINE RLL ON RLL.RELEASE_PK = RL.PK
-                    AND RLL.ORDER_LINE_ID = OOL.ORDER_LINE_ID
-                WHERE
-                    IL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
-                    AND OOL.MIN_FULFILLMENT_STATUS_ID NOT IN (
-                        '1500',
-                        '3600',
-                        '9000',
-                        '7000',
-                        '7500',
-                        '8000',
-                        '8500',
-                        '18000'
-                    )
-                    AND RLL.CANCELLED_QUANTITY > 0
-                GROUP BY
-                    OO.ORDER_ID,
-                    OOL.ORDER_LINE_ID,
-                    OOL.ITEM_ID,
-                    OOL.IS_ON_HOLD,
-                    OOL.MAX_FULFILLMENT_STATUS_ID,
-                    OOL.MIN_FULFILLMENT_STATUS_ID,
-                    OO.CREATED_TIMESTAMP
-                HAVING
-                    COUNT(DISTINCT(RL.RELEASE_ID)) > 10
-            ) AS OO10`
+            default_order.ORD_ORDER OO
+            INNER JOIN default_order.ORD_RELEASE RL ON OO.ORDER_ID = RL.ORDER_ID
+            INNER JOIN default_order.ORD_ORDER_LINE OOL ON OOL.ORDER_PK = OO.PK
+            INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = RL.SHIP_FROM_LOCATION_ID
+            INNER JOIN default_order.ORD_RELEASE_LINE RLL ON RLL.RELEASE_PK = RL.PK
+            AND RLL.ORDER_LINE_ID = OOL.ORDER_LINE_ID
+        WHERE
+            IL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+            AND OOL.MIN_FULFILLMENT_STATUS_ID NOT IN (
+                '1500',
+                '3600',
+                '9000',
+                '7000',
+                '7500',
+                '8000',
+                '8500',
+                '18000'
+            )
+            AND RLL.CANCELLED_QUANTITY != 0
+        GROUP BY
+            OO.ORDER_ID,
+            OOL.ORDER_LINE_ID,
+            OOL.ITEM_ID,
+            OOL.IS_ON_HOLD,
+            OOL.MAX_FULFILLMENT_STATUS_ID,
+            OOL.MIN_FULFILLMENT_STATUS_ID,
+            OO.CREATED_TIMESTAMP
+        HAVING
+            COUNT(DISTINCT(RL.RELEASE_ID)) > 10`
     )
-    return Object.values(response[0][0])[0]
+    return response[0].length
 }
 
 async function uniqueTenBounce() {
     const response = await knex.raw(
         `SELECT
-            COUNT(DISTINCT(OO10.OID))
+            OO.ORDER_ID AS OID,
+            OO.CREATED_TIMESTAMP
         FROM
-            (
-                SELECT
-                    OO.ORDER_ID AS OID,
-                    OO.CREATED_TIMESTAMP
-                FROM
-                    default_order.ORD_ORDER OO
-                    INNER JOIN default_order.ORD_RELEASE RL ON OO.ORDER_ID = RL.ORDER_ID
-                    INNER JOIN default_order.ORD_ORDER_LINE OOL ON OOL.ORDER_PK = OO.PK
-                    INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = RL.SHIP_FROM_LOCATION_ID
-                    INNER JOIN default_order.ORD_RELEASE_LINE RLL ON RLL.RELEASE_PK = RL.PK
-                    AND RLL.ORDER_LINE_ID = OOL.ORDER_LINE_ID
-                WHERE
-                    IL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
-                    AND OOL.MIN_FULFILLMENT_STATUS_ID NOT IN (
-                        '1500',
-                        '3600',
-                        '9000',
-                        '7000',
-                        '7500',
-                        '8000',
-                        '8500',
-                        '18000'
-                    )
-                    AND RLL.CANCELLED_QUANTITY > 0
-                GROUP BY
-                    OO.ORDER_ID,
-                    OO.CREATED_TIMESTAMP,
-                    OOL.ORDER_LINE_ID
-                HAVING
-                    COUNT(DISTINCT(RL.SHIP_FROM_LOCATION_ID)) > 10
-            ) AS OO10`
+            default_order.ORD_ORDER OO
+            INNER JOIN default_order.ORD_RELEASE RL ON OO.ORDER_ID = RL.ORDER_ID
+            INNER JOIN default_order.ORD_ORDER_LINE OOL ON OOL.ORDER_PK = OO.PK
+            INNER JOIN default_inventory.INV_LOCATION IL ON IL.LOCATION_ID = RL.SHIP_FROM_LOCATION_ID
+            INNER JOIN default_order.ORD_RELEASE_LINE RLL ON RLL.RELEASE_PK = RL.PK
+            AND RLL.ORDER_LINE_ID = OOL.ORDER_LINE_ID
+        WHERE
+            IL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+            AND OOL.MIN_FULFILLMENT_STATUS_ID NOT IN (
+                '1500',
+                '3600',
+                '9000',
+                '7000',
+                '7500',
+                '8000',
+                '8500',
+                '18000'
+            )
+            AND RLL.CANCELLED_QUANTITY != 0
+        GROUP BY
+            OO.ORDER_ID,
+            OO.CREATED_TIMESTAMP,
+            OOL.ORDER_LINE_ID
+        HAVING
+            COUNT(DISTINCT(RL.SHIP_FROM_LOCATION_ID)) > 10`
     )
-    return Object.values(response[0][0])[0]
+    return response[0].length
 }
 
 async function uniqueVendorFillRate(days) {
@@ -191,7 +181,7 @@ async function vendorBounceRate() {
                     RL.ORDER_LINE_ID
             ) SB`
     )
-    return Object.values(response[0][0])[0]
+    return Math.floor(Object.values(response[0][0])[0] * 100) / 100
 }
 
 async function vendorTenBounce() {
@@ -220,5 +210,5 @@ async function vendorTenBounce() {
     )
     return Object.values(response[0][0])[0]
 }
-storeBounceRate()
+
 module.exports = { storeBounceRate, tenBounce, uniqueTenBounce, uniqueVendorFillRate, vendorBounceRate, vendorTenBounce }

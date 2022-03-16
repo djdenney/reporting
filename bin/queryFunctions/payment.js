@@ -77,7 +77,7 @@ async function failRate(days) {
     response[0].sort((a, b) => a.FAILURE_RATE - b.FAILURE_RATE)
     return {
         "CARD_TYPE": response[0][response[0].length - 1].CARD_TYPE,
-        "FAILURE_RATE": response[0][response[0].length - 1].FAILURE_RATE
+        "FAILURE_RATE": Math.floor(response[0][response[0].length - 1].FAILURE_RATE * 100) / 100
     }
 }
 

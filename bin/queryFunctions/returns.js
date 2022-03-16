@@ -30,7 +30,7 @@ async function returnRate(days) {
                     CREATED_TIMESTAMP ASC
             ) AS RETURN_ORDERS`
     )
-    return response[0][0].RETURN_RATE
+    return Math.floor(response[0][0].RETURN_RATE * 100) / 100
 }
 
 async function blindReturns(days, isMP) {

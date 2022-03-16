@@ -255,11 +255,11 @@ async function backorderRates(oneDayTotal, twoDayTotal, totalOrders) {
     const allocatedThirtyDayTotal = response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b)[8] : a, 0)
     let allocatedThirtyDayTotalResult = {}
     allocatedThirtyDayTotalResult["AllocatedThirtyDayTotal"] = allocatedThirtyDayTotal
-    resultArray.push(allocatedThirtyDayRateResult)
+    resultArray.push(allocatedThirtyDayTotalResult)
     const allocatedTenDayTotal = response[0].reduce((a, b) => Object.values(b).includes("Allocated") ? a + Object.values(b)[7] : a, 0)
     let allocatedTenDayTotalResult = {}
     allocatedTenDayTotalResult["AllocatedTenDayTotal"] = allocatedTenDayTotal
-    resultArray.push(allocatedTenDayTotal)
+    resultArray.push(allocatedTenDayTotalResult)
     return resultArray
 }   
 

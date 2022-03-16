@@ -3,45 +3,45 @@ const knex = require("../connection");
 async function cancellations(days) {
     const response = await knex.raw(
         `select
-        round(
+            round(
+                (
+                    CANCEL_ORDER.CANCEL_ORDER / TOTAL_ORDER.TOTAL_ORDER
+                ) * 100,
+                2
+            ) as CANCEL_RATE,
+            CANCEL_ORDER.PRICE as $_CANCEL_ORDER_LINE_TOTAL,
+            TOTAL_ORDER.PRICE as $_ORDER_LINE_TOTAL
+        from
+            -- 1A  CANCEL ORDER LINES in the last 7 Days
             (
-                CANCEL_ORDER.CANCEL_ORDER / TOTAL_ORDER.TOTAL_ORDER
-            ) * 100,
-            0
-        ) as CANCEL_RATE,
-        CANCEL_ORDER.PRICE as $_CANCEL_ORDER_LINE_TOTAL,
-        TOTAL_ORDER.PRICE as $_ORDER_LINE_TOTAL
-    from
-        -- 1A  CANCEL ORDER LINES in the last 7 Days
-        (
-            select
-                SUM(CANCELLED_ORDER_LINE_SUB_TOTAL) as PRICE,
-                COUNT(ool.PK) as CANCEL_ORDER
-            from
-                default_order.ORD_ORDER_LINE ool
-                inner join default_order.ORD_ORDER oo on ool.ORDER_PK = oo.PK
-            where
-                1 = 1
-                AND oo.IS_CONFIRMED = 1
-                AND ool.IS_CANCELLED = 1
-                AND oo.MAX_RETURN_STATUS_ID is null
-                AND ool.MAX_FULFILLMENT_STATUS_ID = '9000'
-                AND ool.UPDATED_TIMESTAMP >= now() - INTERVAL ${days} DAY
-        ) as CANCEL_ORDER,
-        -- 1B TOTAL ORDER lINES CREATED in the past 7 Days
-        (
-            select
-                SUM(ORDER_LINE_SUB_TOTAL) as PRICE,
-                COUNT(ool.PK) as TOTAL_ORDER
-            from
-                default_order.ORD_ORDER_LINE ool
-                inner join default_order.ORD_ORDER oo on ool.ORDER_PK = oo.PK
-            where
-                1 = 1
-                AND oo.IS_CONFIRMED = 1
-                AND oo.MAX_RETURN_STATUS_ID is null
-                AND ool.CREATED_TIMESTAMP >= now() - INTERVAL ${days} DAY
-        ) as TOTAL_ORDER`
+                select
+                    SUM(CANCELLED_ORDER_LINE_SUB_TOTAL) as PRICE,
+                    COUNT(ool.PK) as CANCEL_ORDER
+                from
+                    default_order.ORD_ORDER_LINE ool
+                    inner join default_order.ORD_ORDER oo on ool.ORDER_PK = oo.PK
+                where
+                    1 = 1
+                    AND oo.IS_CONFIRMED = 1
+                    AND ool.IS_CANCELLED = 1
+                    AND oo.MAX_RETURN_STATUS_ID is null
+                    AND ool.MAX_FULFILLMENT_STATUS_ID = '9000'
+                    AND ool.UPDATED_TIMESTAMP >= now() - INTERVAL ${days} DAY
+            ) as CANCEL_ORDER,
+            -- 1B TOTAL ORDER lINES CREATED in the past 7 Days
+            (
+                select
+                    SUM(ORDER_LINE_SUB_TOTAL) as PRICE,
+                    COUNT(ool.PK) as TOTAL_ORDER
+                from
+                    default_order.ORD_ORDER_LINE ool
+                    inner join default_order.ORD_ORDER oo on ool.ORDER_PK = oo.PK
+                where
+                    1 = 1
+                    AND oo.IS_CONFIRMED = 1
+                    AND oo.MAX_RETURN_STATUS_ID is null
+                    AND ool.CREATED_TIMESTAMP >= now() - INTERVAL ${days} DAY
+            ) as TOTAL_ORDER`
     )
     // console.log(`${days} Day Cancel Rate: ${response[0][0].CANCEL_RATE}%`)
     return response[0][0].CANCEL_RATE
@@ -82,7 +82,7 @@ async function storeVendorDCCancel(days) {
                     and OO.IS_CONFIRMED = 1
             ) as TOTAL_CANCEL`
     )
-    return response[0][0].oD
+    return Math.floor(response[0][0].oD * 100) / 100
 }
 async function allCancelRates(days, rates = []) {
     const response = await knex.raw(
@@ -160,7 +160,7 @@ async function cancelToStoreOrVendor() {
                     and OO.IS_CONFIRMED = 1
             ) as TOTAL_CANCEL`
     )
-    return Object.values(response[0][0])[0]
+    return Math.floor(Object.values(response[0][0])[0] * 100) / 100
 }
 
 async function bopisLineShorts() {

@@ -77,7 +77,7 @@ async function backorderedSuccessful() {
     
     return {
         "BACKORDERED": Math.floor(response[0][0].BACKORDERED / response[0][0].OPENED_ORDERS * 10000) / 100,
-        "SUCCESSFUL": response[0][0].SUCCESS_RATE
+        "SUCCESSFUL": Math.floor(response[0][0].SUCCESS_RATE * 100) / 100
     }
 }
 

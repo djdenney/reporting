@@ -280,7 +280,7 @@ async function storeFirstFillRates(days) {
     const odsr = response[0].find((line) => Object.values(line).includes("StoreRegular"))
     const odsrv = Object.values(odsr).filter((v) => typeof(v) === "number")
 
-    return odsrv[0]
+    return Math.floor(odsrv[0] * 100) / 100
 }
 
 async function uniqueStoreFillRate(days) {
