@@ -333,4 +333,69 @@ async function uniqueStoreFillRate(days) {
     const usfr = Object.values(response[0].find((line) => line.LOCATION_SUB_TYPE_ID === "StoreRegular")).find((value) => typeof value === 'number')
     return Math.floor(usfr * 10000) / 100
 }
-module.exports = { fillRate, storeFirstFillRates, uniqueStoreFillRate }
+
+async function successRate(ytd, fromDate, toDate) {
+    ytd ? fromDate = new Date(new Date("2021-10-03")).toISOString().slice(0, 10) : fromDate = new Date(new Date().setDate(new Date().getDate() - 35)).toISOString().slice(0, 10)
+    toDate = new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().slice(0, 10)
+    const response = await knex.raw(
+        `select
+            SUM(SuccessRate.Success) / SUM(SuccessRate.UnitsAttempted) AS '${ytd ? 'YTD' : '30 DAY'} SUCCESS RATE'
+        FROM
+            (
+                select
+                    distinct OO.ORG_ID,
+                    OO.ORDER_ID,
+                    OL.ITEM_ID,
+                    OL.ORDER_LINE_ID,
+                    RETURN_LINE_COUNT,
+                    coalesce(OL.QUANTITY, 0) AS OrderLineRemain,
+                    coalesce(OLA.CANCEL_QUANTITY, 0) AS OrderLineCancel,
+                    coalesce(OL.QUANTITY, 0) + coalesce(OLA.CANCEL_QUANTITY, 0) AS OriginalOrderLine,
+                    SUM(coalesce(ORL.QUANTITY, 0)) AS ReleaseQty,
+                    CASE
+                        when SUM(coalesce(ORL.QUANTITY, 0)) >= (
+                            coalesce(OL.QUANTITY, 0) + coalesce(OLA.CANCEL_QUANTITY, 0)
+                        ) THEN (
+                            coalesce(OL.QUANTITY, 0) + coalesce(OLA.CANCEL_QUANTITY, 0)
+                        )
+                        when SUM(coalesce(ORL.QUANTITY, 0)) < (
+                            coalesce(OL.QUANTITY, 0) + coalesce(OLA.CANCEL_QUANTITY, 0)
+                        ) THEN SUM(coalesce(ORL.QUANTITY, 0))
+                    END AS UnitsAttempted,
+                    SUM(ORL.FULFILLED_QUANTITY) AS Success
+                from
+                    default_order.ORD_ORDER OO
+                    join default_order.ORD_ORDER_LINE OL on OO.ORDER_ID = OL.ORDER_ID
+                    left join default_order.ORD_ORDER_LINE_CANCEL_HISTORY OLA on OL.PK = OLA.ORDER_LINE_PK
+                    join default_order.ORD_RELEASE ORE on OO.ORDER_ID = ORE.ORDER_ID
+                    join default_order.ORD_RELEASE_LINE ORL on ORE.PK = ORL.RELEASE_PK
+                    and ORL.ORDER_LINE_ID = OL.ORDER_LINE_ID
+                    join default_organization.ORG_LOCATION OLL on ORE.SHIP_FROM_LOCATION_ID = OLL.LOCATION_ID -- where OL.quantity = 0 and OO.order_id <> '00000001'  and item_id <> '12103'
+                    -- GROUP BY OO.ORG_ID, OO.ORDER_ID, OL.ITEM_ID, OL.ORDER_LINE_ID, OL.PK, OO.pk, OL.QUANTITY, OL.LINE_TYPE_ID
+                    -- Need to only use releases that went to stores
+                where
+                    (
+                        RETURN_LINE_COUNT < 1
+                        or RETURN_LINE_COUNT is null
+                    )
+                    and OLL.LOCATION_SUB_TYPE_ID = 'StoreRegular'
+                    and ORE.DESTINATION_ACTION in ('DELIVERY', 'MERGE')
+                    and DATE(OO.CREATED_TIMESTAMP) >= '${fromDate}'
+                    and DATE(OO.CREATED_TIMESTAMP) <= '${toDate}'
+                GROUP BY
+                    OO.ORG_ID,
+                    OO.ORDER_ID,
+                    OL.ITEM_ID,
+                    OL.ORDER_LINE_ID,
+                    RETURN_LINE_COUNT,
+                    OL.LINE_TYPE_ID,
+                    OL.QUANTITY,
+                    OL.QUANTITY,
+                    OLA.CANCEL_QUANTITY -- 11k release lines to stores in last 30 days
+                    -- 7222 rows with a destination action of delivery/merge
+            ) SuccessRate`
+    )
+    return Math.floor(Object.values(response[0][0])[0] * 10000) / 100
+}
+
+module.exports = { fillRate, storeFirstFillRates, uniqueStoreFillRate, successRate }
