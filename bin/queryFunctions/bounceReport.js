@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function storeBounceRate() {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL2
         `SELECT
             AVG(SB.CR)
         FROM
@@ -31,6 +33,8 @@ async function storeBounceRate() {
 
 async function tenBounce() {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL4 (Modified to Get Order Detail Rather than Count)
         `SELECT
             OO.ORDER_ID AS OID,
             OOL.ORDER_LINE_ID,
@@ -75,6 +79,8 @@ async function tenBounce() {
 
 async function uniqueTenBounce() {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL5 (Modified to Get Order Detail Rather than Count)
         `SELECT
             OO.ORDER_ID AS OID,
             OO.CREATED_TIMESTAMP
@@ -110,6 +116,8 @@ async function uniqueTenBounce() {
 
 async function uniqueVendorFillRate(days) {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL19 (Modified to Accommodate "days" variable)
         `SELECT
             LOCATION_SUB_TYPE_ID,
             AVG(SFR)
@@ -161,6 +169,8 @@ async function uniqueVendorFillRate(days) {
 
 async function vendorBounceRate() {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL7
         `SELECT
             AVG(SB.CR)
         FROM
@@ -186,6 +196,8 @@ async function vendorBounceRate() {
 
 async function vendorTenBounce() {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL8
         `SELECT
             COUNT(DISTINCT(OO10.OID))
         FROM

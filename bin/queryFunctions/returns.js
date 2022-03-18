@@ -2,6 +2,8 @@ const knex = require("../connection")
 
 async function returnRate(days) {
     const response = await knex.raw(
+        // Report: Returns
+        // Query: SQL5 (Modified to Accommodate "days" variable)
         `SELECT
             RETURN_ORDERS.COUNT / CREATED_ORDERS.COUNT * 100 AS 'RETURN_RATE'
         FROM
@@ -35,6 +37,8 @@ async function returnRate(days) {
 
 async function blindReturns(days, isMP) {
     const response = await knex.raw(
+        // Report: Returns
+        // Query: SQL1 (Modified to Accommodate "days" variable)
         `select
             oo.ORG_ID as "Org",
             sum(

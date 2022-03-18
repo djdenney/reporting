@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function openRates() {
     const response = await knex.raw(
+        // Report: DEV-3948 Daily Report - Age Report v3
+        // Query: LocationTypeUpdated
         `SELECT
             subtable.LOCATION_SUB_TYPE_ID AS "Order Stores",
             COUNT(
@@ -150,6 +152,8 @@ async function openRates() {
 
 async function backorderRates(oneDayTotal, twoDayTotal, totalOrders) {
     const response = await knex.raw(
+        // Report: DEV-3948 Daily Report - Age Report v3
+        // Query: OrderStatus
         `SELECT
             subtable.DESCRIPTION AS "Order Status",
             COUNT(
@@ -265,6 +269,8 @@ async function backorderRates(oneDayTotal, twoDayTotal, totalOrders) {
 
 async function returnToShelf() {
     const response = await knex.raw(
+        // Report: DEV-3948 Daily Report - Age Report v3
+        // Query: ReturnToShelf
         `SELECT
             FF.SHIP_TO_LOCATION_ID,
             date_format(FF.CREATED_TIMESTAMP, '%Y-%m-%d') AS 'CREATED_TIMESTAMP',
@@ -310,6 +316,8 @@ async function returnToShelf() {
 
 async function stalePickStatus() {
     const response = await knex.raw(
+        // Report: DEV-3948 Daily Report - Age Report v3
+        // Query: SFSOrdersInPickedStatus
         `select
             oo.ORDER_ID,
             oor.RELEASE_ID,

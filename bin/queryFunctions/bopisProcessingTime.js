@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function bopisProcessingTime(days) {
     const response = await knex.raw(
+        // Report: BOPIS 1 Day - Summary
+        // Query: SQL5 (Modified to Accommodate "days" variable)
         `Select
             timestampdiff(
                 second,

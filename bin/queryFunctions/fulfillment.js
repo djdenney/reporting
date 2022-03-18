@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function fillRate(days) {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL26 (Modified to Accommodate "days" variable)
         `SELECT
             SFLI,
             AVG(SFR)
@@ -49,6 +51,8 @@ async function fillRate(days) {
 
 async function storeFirstFillRates(days) {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL30 (Modified to Accommodate "days" variable)
         `SELECT
             '3PL',
             COUNT(*) / (
@@ -285,6 +289,8 @@ async function storeFirstFillRates(days) {
 
 async function uniqueStoreFillRate(days) {
     const response = await knex.raw(
+        // Report: DEV-3919 Daily Reporting - Bounced Orders
+        // Query: SQL19 (Modified to Accommodate "days" variable)
         `SELECT
             LOCATION_SUB_TYPE_ID,
             AVG(SFR)
@@ -338,6 +344,8 @@ async function successRate(ytd, fromDate, toDate) {
     ytd ? fromDate = new Date(new Date("2021-10-03")).toISOString().slice(0, 10) : fromDate = new Date(new Date().setDate(new Date().getDate() - 35)).toISOString().slice(0, 10)
     toDate = new Date(new Date().setDate(new Date().getDate() - 5)).toISOString().slice(0, 10)
     const response = await knex.raw(
+        // Report: Does not exist, This query was provided in AdHoc email from Kyle Pretsch
+        // Query: N/A
         `select
             SUM(SuccessRate.Success) / SUM(SuccessRate.UnitsAttempted) AS '${ytd ? 'YTD' : '30 DAY'} SUCCESS RATE'
         FROM

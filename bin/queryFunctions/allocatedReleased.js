@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function backorderedSuccessful() {
     const response = await knex.raw(
+        // Report: DEV-3946 Daily Reporting - Allocated vs. Released
+        // Query: SQL1
         `SELECT
             INCOMING_ORDERS.OPENED_ORDERS,
             BACKORDERED_ORDERS.BACKORDERED,
@@ -83,6 +85,8 @@ async function backorderedSuccessful() {
 
 async function stuckInAllocated() {
     const response = await knex.raw(
+        // Report: DEV-3946 Daily Reporting - Allocated vs. Released
+        // Query: SQL3
         `select
             ORG_ID,
             ORDER_ID,
@@ -117,6 +121,8 @@ async function stuckInAllocated() {
 
 async function timeToRelease(ITS = [], LEA = [], LPS = [], MP = [], PRO = [], PSW = []) {
     const response = await knex.raw(
+        // Report: DEV-3946 Daily Reporting - Allocated vs. Released
+        // Query: SQL4
         `SELECT
             ALLOCATED_TIMESTAMP_ORG_ID,
             time_to_sec(

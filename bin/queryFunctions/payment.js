@@ -2,6 +2,8 @@ const knex = require("../connection");
 
 async function failRate(days) {
     const response = await knex.raw(
+        // Report: paymentauthseth
+        // Query: SQL1 (Modified to Accommodate "days" variable)
         `SELECT
             DISTINCT FALIURES.CARD_TYPE,
             FALIURES.TRAN_TYPE,
