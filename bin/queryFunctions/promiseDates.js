@@ -1,10 +1,11 @@
-const knex = require('../connection')
+const knex = require("../connection");
+let morning = new Date(new Date().setHours(2, 0, 0, 0)).toISOString().split("T").join(" ").slice(0, 19);
 
 async function released(days) {
-    const response = await knex.raw(
-        // Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
-        // Query: N/A
-        `select
+	const response = await knex.raw(
+		// Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
+		// Query: N/A
+		`select
             Promising.Org,
             Promising.Met_RELEASE_SLA "SLA Compliance ${days} Day",
             count(Promising.Met_RELEASE_SLA) "Total"
@@ -37,8 +38,8 @@ async function released(days) {
                     left outer join default_inventory.INV_LOCATION il on il.LOCATION_ID = oor.SHIP_FROM_LOCATION_ID
                 WHERE
                     1 = 1
-                    and oo.created_timestamp <= NOW() - INTERVAL 1.5 HOUR
-                    and oo.created_timestamp >= NOW() - INTERVAL ${days} DAY
+                    and oo.created_timestamp <= TIMESTAMP('${morning}')
+                    and oo.created_timestamp >= TIMESTAMP('${morning}') - INTERVAL ${days} DAY
                     and ool.IS_RETURN = 0
                     and oo.ORG_ID not in ('MP')
                     and fsd.DESCRIPTION not in ('Canceled')
@@ -54,38 +55,38 @@ async function released(days) {
             Promising.Met_RELEASE_SLA
         order by
             1,
-            3 desc;`
-    )
-    const releasedTotals = response[0].reduce((a, b) => {
-        if (a && !Object.keys(a).includes(b.Org)) {
-            a[b.Org] = {}
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'Yes') {
-            a[b.Org]['IN_COMPLIANCE'] = b.Total
-            return a
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'No') {
-            a[b.Org]['NOT_IN_COMPLIANCE'] = b.Total 
-            return a
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'Awaiting Release - Failed SLA') {
-            a[b.Org]['NOT_IN_COMPLIANCE'] += b.Total
-            return a
-        }
-    }, {})
-    const releasedRates = Object.entries(releasedTotals).map((line) => {
-        const obj = {}
-        obj[line[0]] = 100 - Math.floor(line[1]['NOT_IN_COMPLIANCE'] / (line[1]['NOT_IN_COMPLIANCE'] + line[1]['IN_COMPLIANCE']) * 10000) / 100
-        return obj
-    })
-    return releasedRates
+            3 desc;`,
+	);
+	const releasedTotals = response[0].reduce((a, b) => {
+		if (a && !Object.keys(a).includes(b.Org)) {
+			a[b.Org] = {};
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "Yes") {
+			a[b.Org]["IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "No") {
+			a[b.Org]["NOT_IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "Awaiting Release - Failed SLA") {
+			a[b.Org]["NOT_IN_COMPLIANCE"] += b.Total;
+			return a;
+		}
+	}, {});
+	// const releasedRates = Object.entries(releasedTotals).map((line) => {
+	// 	const obj = {};
+	// 	obj[line[0]] = 100 - Math.floor((line[1]["NOT_IN_COMPLIANCE"] / (line[1]["NOT_IN_COMPLIANCE"] + line[1]["IN_COMPLIANCE"])) * 10000) / 100;
+	// 	return obj;
+	// });
+	return releasedTotals;
 }
 
 async function shipped(days) {
-    const response = await knex.raw(
-        // Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
-        // Query: N/A
-        `select
+	const response = await knex.raw(
+		// Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
+		// Query: N/A
+		`select
             SHIP_DATE.Org,
             SHIP_DATE.Met_Shipped_Date_SLA "SLA Compliance ${days} Day",
             COUNT(SHIP_DATE.Met_Shipped_Date_SLA) "Total"
@@ -117,8 +118,8 @@ async function shipped(days) {
                     and orl.RELEASE_LINE_ID = ofd.RELEASE_LINE_ID
                 WHERE
                     1 = 1
-                    and oo.created_timestamp <= NOW() - INTERVAL 1.5 HOUR
-                    and oo.created_timestamp >= NOW() - INTERVAL ${days} DAY
+                    and oo.created_timestamp <= TIMESTAMP('${morning}')
+                    and oo.created_timestamp >= TIMESTAMP('${morning}') - INTERVAL ${days} DAY
                     AND orl.FULFILLED_QUANTITY > 0
                     and oo.ORG_ID not in ('MP')
                     and ool.PROMISED_SHIP_DATE is not null
@@ -129,34 +130,34 @@ async function shipped(days) {
             ) SHIP_DATE
         group by
             SHIP_DATE.Org,
-            SHIP_DATE.Met_Shipped_Date_SLA;`
-    )
-    const shippedTotals = response[0].reduce((a, b) => {
-        if (a && !Object.keys(a).includes(b.Org)) {
-            a[b.Org] = {}
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'Yes') {
-            a[b.Org]['IN_COMPLIANCE'] = b.Total
-            return a
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'No') {
-            a[b.Org]['NOT_IN_COMPLIANCE'] = b.Total 
-            return a
-        }
-    }, {})
-    const shippedRates = Object.entries(shippedTotals).map((line) => {
-        const obj = {}
-        obj[line[0]] = 100 - Math.floor(line[1]['NOT_IN_COMPLIANCE'] / (line[1]['NOT_IN_COMPLIANCE'] + line[1]['IN_COMPLIANCE']) * 10000) / 100
-        return obj
-    })
-    return shippedRates
+            SHIP_DATE.Met_Shipped_Date_SLA;`,
+	);
+	const shippedTotals = response[0].reduce((a, b) => {
+		if (a && !Object.keys(a).includes(b.Org)) {
+			a[b.Org] = {};
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "Yes") {
+			a[b.Org]["IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "No") {
+			a[b.Org]["NOT_IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+	}, {});
+	// const shippedRates = Object.entries(shippedTotals).map((line) => {
+	// 	const obj = {};
+	// 	obj[line[0]] = 100 - Math.floor((line[1]["NOT_IN_COMPLIANCE"] / (line[1]["NOT_IN_COMPLIANCE"] + line[1]["IN_COMPLIANCE"])) * 10000) / 100;
+	// 	return obj;
+	// });
+	return shippedTotals;
 }
 
 async function delivered(days) {
-    const response = await knex.raw(
-        // Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
-        // Query: N/A
-        `select
+	const response = await knex.raw(
+		// Report: Does not exist, This query was provided in AdHoc email from Matt Hickok
+		// Query: N/A
+		`select
             DELIVERY_DATE.ORG,
             DELIVERY_DATE.Met_DELIVERY_SLA "SLA Compliance ${days} Day",
             COUNT(DELIVERY_DATE.Met_DELIVERY_SLA) "Total"
@@ -185,8 +186,8 @@ async function delivered(days) {
                     and OOTI.ORDER_PK = OOL.ORDER_PK
                 where
                     1 = 1
-                    and OOL.created_timestamp <= NOW() - INTERVAL 1.5 HOUR
-                    and OOL.created_timestamp >= NOW() - INTERVAL ${days} DAY
+                    and OOL.created_timestamp <= TIMESTAMP('${morning}')
+                    and OOL.created_timestamp >= TIMESTAMP('${morning}') - INTERVAL ${days} DAY
                     and OOL.ORG_ID != 'MP'
                     and OOL.IS_RETURN = 0
                     and OO.SELLING_CHANNEL_ID != 'CallCenter'
@@ -195,27 +196,71 @@ async function delivered(days) {
             ) DELIVERY_DATE
         group by
             DELIVERY_DATE.ORG,
-            DELIVERY_DATE.Met_DELIVERY_SLA;`
-    )
-    const deliveredTotals = response[0].reduce((a, b) => {
-        if (a && !Object.keys(a).includes(b.Org)) {
-            a[b.Org] = {}
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'Yes') {
-            a[b.Org]['IN_COMPLIANCE'] = b.Total
-            return a
-        }
-        if (a && b[`SLA Compliance ${days} Day`] === 'No') {
-            a[b.Org]['NOT_IN_COMPLIANCE'] = b.Total 
-            return a
-        }
-    }, {})
-    const deliveredRates = Object.entries(deliveredTotals).map((line) => {
-        const obj = {}
-        obj[line[0]] = 100 - Math.floor(line[1]['NOT_IN_COMPLIANCE'] / (line[1]['NOT_IN_COMPLIANCE'] + line[1]['IN_COMPLIANCE']) * 10000) / 100
-        return obj
-    })
-    return deliveredRates
+            DELIVERY_DATE.Met_DELIVERY_SLA;`,
+	);
+	const deliveredTotals = response[0].reduce((a, b) => {
+		if (a && !Object.keys(a).includes(b.Org)) {
+			a[b.Org] = {};
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "Yes") {
+			a[b.Org]["IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+		if (a && b[`SLA Compliance ${days} Day`] === "No") {
+			a[b.Org]["NOT_IN_COMPLIANCE"] = b.Total;
+			return a;
+		}
+	}, {});
+	// const deliveredRates = Object.entries(deliveredTotals).map((line) => {
+	// 	const obj = {};
+	// 	obj[line[0]] = 100 - Math.floor((line[1]["NOT_IN_COMPLIANCE"] / (line[1]["NOT_IN_COMPLIANCE"] + line[1]["IN_COMPLIANCE"])) * 10000) / 100;
+	// 	return obj;
+	// });
+	return deliveredTotals;
 }
 
-module.exports = { released, shipped, delivered }
+async function promiseSuccessRate(days, totals = []) {
+	const rel = await released(days);
+	const shp = await shipped(days);
+	const del = await delivered(days);
+	Object.entries(rel).forEach(([key, value]) => {
+		let obj = {};
+		obj[key] = value;
+		totals.push(obj);
+	});
+	Object.entries(shp).forEach(([key, value]) => {
+		let obj = {};
+		obj[key] = value;
+		totals.push(obj);
+	});
+	Object.entries(del).forEach(([key, value]) => {
+		let obj = {};
+		obj[key] = value;
+		totals.push(obj);
+	});
+	totals = totals.reduce((a, b) => {
+		if (a && !Object.keys(a).includes(Object.keys(b)[0])) {
+			a[Object.keys(b)[0]] = { IN_COMPLIANCE: 0, NOT_IN_COMPLIANCE: 0 };
+		}
+		if (a && Object.keys(Object.values(b)[0]).includes("IN_COMPLIANCE")) {
+			a[Object.keys(b)[0]]["IN_COMPLIANCE"] += Object.values(b)[0]["IN_COMPLIANCE"];
+		}
+		if (a && Object.keys(Object.values(b)[0]).includes("NOT_IN_COMPLIANCE")) {
+			a[Object.keys(b)[0]]["NOT_IN_COMPLIANCE"] += Object.values(b)[0]["NOT_IN_COMPLIANCE"];
+		}
+		return a;
+	}, {});
+	totals = Object.values(totals).reduce((a, b) => {
+		if (!Object.keys(a).includes("IN_COMPLIANCE")) {
+			a["IN_COMPLIANCE"] = 0;
+			a["NOT_IN_COMPLIANCE"] = 0;
+		}
+		a["IN_COMPLIANCE"] += b.IN_COMPLIANCE;
+		a["NOT_IN_COMPLIANCE"] += b.NOT_IN_COMPLIANCE;
+		return a;
+	}, {});
+	let rate = Math.floor((totals.IN_COMPLIANCE / (totals.IN_COMPLIANCE + totals.NOT_IN_COMPLIANCE)) * 10000) / 100;
+	return rate;
+}
+
+module.exports = { released, shipped, delivered, promiseSuccessRate };

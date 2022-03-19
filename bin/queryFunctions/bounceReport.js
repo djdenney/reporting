@@ -1,10 +1,10 @@
 const knex = require("../connection");
 
 async function storeBounceRate() {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL2
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL2
+		`SELECT
             AVG(SB.CR)
         FROM
             (
@@ -26,16 +26,16 @@ async function storeBounceRate() {
                     AND OO.MAX_FULFILLMENT_STATUS_ID >= 4500
                 GROUP BY
                     R.ORDER_ID
-            ) SB`
-    )
-    return Math.floor(Object.values(response[0][0])[0] * 100) / 100
+            ) SB`,
+	);
+	return Math.floor(Object.values(response[0][0])[0] * 100) / 100;
 }
 
 async function tenBounce() {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL4 (Modified to Get Order Detail Rather than Count)
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL4 (Modified to Get Order Detail Rather than Count)
+		`SELECT
             OO.ORDER_ID AS OID,
             OOL.ORDER_LINE_ID,
             OOL.ITEM_ID,
@@ -72,16 +72,16 @@ async function tenBounce() {
             OOL.MIN_FULFILLMENT_STATUS_ID,
             OO.CREATED_TIMESTAMP
         HAVING
-            COUNT(DISTINCT(RL.RELEASE_ID)) > 10`
-    )
-    return response[0].length
+            COUNT(DISTINCT(RL.RELEASE_ID)) > 10`,
+	);
+	return response[0].length;
 }
 
 async function uniqueTenBounce() {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL5 (Modified to Get Order Detail Rather than Count)
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL5 (Modified to Get Order Detail Rather than Count)
+		`SELECT
             OO.ORDER_ID AS OID,
             OO.CREATED_TIMESTAMP
         FROM
@@ -109,16 +109,16 @@ async function uniqueTenBounce() {
             OO.CREATED_TIMESTAMP,
             OOL.ORDER_LINE_ID
         HAVING
-            COUNT(DISTINCT(RL.SHIP_FROM_LOCATION_ID)) > 10`
-    )
-    return response[0].length
+            COUNT(DISTINCT(RL.SHIP_FROM_LOCATION_ID)) > 10`,
+	);
+	return response[0].length;
 }
 
 async function uniqueVendorFillRate(days) {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL19 (Modified to Accommodate "days" variable)
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL19 (Modified to Accommodate "days" variable)
+		`SELECT
             LOCATION_SUB_TYPE_ID,
             AVG(SFR)
         FROM
@@ -161,17 +161,17 @@ async function uniqueVendorFillRate(days) {
                     ) IS NOT NULL
             ) AS T2
         GROUP BY
-            LOCATION_SUB_TYPE_ID`
-    )
-    const uvfr = Object.values(response[0].find((line) => line.LOCATION_SUB_TYPE_ID === "DropShipVendor")).find((value) => typeof value === 'number')
-    return Math.floor(uvfr * 10000) / 100
+            LOCATION_SUB_TYPE_ID`,
+	);
+	const uvfr = Object.values(response[0].find((line) => line.LOCATION_SUB_TYPE_ID === "DropShipVendor")).find((value) => typeof value === "number");
+	return Math.floor(uvfr * 10000) / 100;
 }
 
 async function vendorBounceRate() {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL7
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL7
+		`SELECT
             AVG(SB.CR)
         FROM
             (
@@ -189,16 +189,16 @@ async function vendorBounceRate() {
                 GROUP BY
                     R.ORDER_ID,
                     RL.ORDER_LINE_ID
-            ) SB`
-    )
-    return Math.floor(Object.values(response[0][0])[0] * 100) / 100
+            ) SB`,
+	);
+	return Math.floor(Object.values(response[0][0])[0] * 100) / 100;
 }
 
 async function vendorTenBounce() {
-    const response = await knex.raw(
-        // Report: DEV-3919 Daily Reporting - Bounced Orders
-        // Query: SQL8
-        `SELECT
+	const response = await knex.raw(
+		// Report: DEV-3919 Daily Reporting - Bounced Orders
+		// Query: SQL8
+		`SELECT
             COUNT(DISTINCT(OO10.OID))
         FROM
             (
@@ -218,9 +218,9 @@ async function vendorTenBounce() {
                     OO.ORDER_ID
                 HAVING
                     COUNT(DISTINCT(RL.RELEASE_ID)) > 5
-            ) AS OO10`
-    )
-    return Object.values(response[0][0])[0]
+            ) AS OO10`,
+	);
+	return Object.values(response[0][0])[0];
 }
 
-module.exports = { storeBounceRate, tenBounce, uniqueTenBounce, uniqueVendorFillRate, vendorBounceRate, vendorTenBounce }
+module.exports = { storeBounceRate, tenBounce, uniqueTenBounce, uniqueVendorFillRate, vendorBounceRate, vendorTenBounce };
